@@ -1,0 +1,52 @@
+#!/bin/sh
+# Pre-commit contradiction gate (workspace QA safety measure).
+# In any repo that ships tools/contradiction_qa.py (the llm-wiki projects), block a commit while
+# there are unresolved HARD contradictions -- two claims that cannot both be true. Committing one
+# would bury a known conflict as settled knowledge. SOFT/SCOPE contradictions are tentative and do
+# NOT block (they proceed flagged, per the wiki severity model). No-op in any repo without the
+# module, so it is harmless on non-wiki repos.
+#
+# Fail-OPEN by design: if the gate cannot run (no python, import error, etc.) it does NOT block --
+# a missed check is recoverable, a repo that cannot commit is not. (The pre-push owner guard fails
+# CLOSED because a wrong-repo push is the dangerous case; a missed contradiction check is not.)
+#
+# Deliberate bypass for an intentional commit over an open hard contradiction:
+#     git commit --no-verify
+
+[ -f tools/contradiction_qa.py ] || exit 0          # not a contradiction-QA wiki -> nothing to gate
+
+report=$(python - <<'PY' 2>/dev/null
+import sys
+sys.path.insert(0, "tools")
+try:
+    import contradiction_qa as cq
+    hard, _ = cq.split_severity(cq.scan_contradictions("."))
+except Exception:
+    sys.exit(0)                                     # gate error -> stay silent, fail open
+print(len(hard))
+for c in hard:
+    print("  - " + c["file"] + ":" + str(c["line"]))
+PY
+)
+
+[ -z "$report" ] && exit 0                          # python missing / errored -> fail open
+count=$(printf '%s\n' "$report" | head -1)
+case "$count" in ''|*[!0-9]*) exit 0 ;; esac        # non-numeric -> fail open
+[ "$count" -eq 0 ] && exit 0                        # no hard contradictions -> allow the commit
+
+{
+  echo ""
+  echo "  ====================================================="
+  echo "  PRE-COMMIT BLOCKED -- $count unresolved HARD contradiction(s)."
+  echo "  A HARD contradiction is two claims that cannot both be true;"
+  echo "  committing would record a known conflict as settled knowledge."
+  echo ""
+  printf '%s\n' "$report" | tail -n +2
+  echo ""
+  echo "  Resolve each on its wiki page (set Status: Unresolved -> Status: Resolved),"
+  echo "  or, if this commit is genuinely intended over the open conflict, bypass with:"
+  echo "      git commit --no-verify"
+  echo "  ====================================================="
+  echo ""
+} 1>&2
+exit 1

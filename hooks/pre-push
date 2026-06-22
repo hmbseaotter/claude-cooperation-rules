@@ -1,0 +1,48 @@
+#!/bin/sh
+# Pre-push ownership guardrail (workspace safety measure).
+# Blocks a push to a GitHub repo whose owner is NOT the currently
+# authenticated GitHub user. Identity is detected dynamically via
+# `gh api user` -- no account name is hardcoded, so this is portable
+# to anyone who installs it.
+# Deliberate bypass for an intentionally foreign push:
+#     git push --no-verify <remote> <branch>
+
+remote_url="$2"
+[ -z "$remote_url" ] && remote_url="$1"
+
+host=$(printf '%s' "$remote_url"  | sed -E 's#^[^@/]*@##; s#^[a-zA-Z]+://##; s#[/:].*$##')
+owner=$(printf '%s' "$remote_url" | sed -E 's#^[^@/]*@##; s#^[a-zA-Z]+://##; s#^[^/:]+[/:]+##; s#/.*$##')
+
+block() {
+  echo ""                                                          1>&2
+  echo "  ====================================================="   1>&2
+  echo "  PRE-PUSH BLOCKED -- THIS IS NOT YOUR REPO. BE CAREFUL."  1>&2
+  echo "  target : $owner ($remote_url)"                          1>&2
+  echo "  reason : $1"                                            1>&2
+  echo "  If this foreign push is truly intended:"                1>&2
+  echo "      git push --no-verify <remote> <branch>"             1>&2
+  echo "  ====================================================="   1>&2
+  echo ""                                                          1>&2
+  exit 1
+}
+
+[ "$host" = "github.com" ] || block "non-GitHub or unrecognized host ($host); ownership cannot be verified"
+
+login=$(gh api user --jq .login 2>/dev/null)
+[ -n "$login" ] || block "could not determine your GitHub identity (is gh authenticated?)"
+
+lo=$(printf '%s' "$owner" | tr 'A-Z' 'a-z')
+ll=$(printf '%s' "$login" | tr 'A-Z' 'a-z')
+[ "$lo" = "$ll" ] || block "target owner '$owner' != your account '$login'"
+
+# Ownership verified. Hand off to git-lfs so its objects upload automatically:
+# this global hook (core.hooksPath) shadows each repo's own .git/hooks/pre-push,
+# which is where git-lfs normally installs this call. Without it, pushing new
+# LFS-tracked files (raw images / master PDFs) is rejected remotely with
+# "GH008: ... unknown Git LFS objects". The ref list on stdin is untouched above,
+# so git-lfs receives it intact. No-op in repos that don't use LFS.
+if command -v git-lfs >/dev/null 2>&1; then
+  git lfs pre-push "$@" || exit $?
+fi
+
+exit 0
