@@ -31,6 +31,17 @@ sh claude-cooperation-rules/install.sh
 
 ## Full step-by-step (assumes nothing)
 
+> **Where you run this, and where it lands — read this first:**
+> - **Run the commands from any directory** (home, Downloads, a scratch/temp folder — *anywhere*). They
+>   do **not** need to be run from inside `~/.claude` or any special "Claude" folder.
+> - **The cloned / unzipped `claude-cooperation-rules` folder is just a temporary *source*.** Put it
+>   wherever is convenient — do **not** put it inside `~/.claude` — and you can **delete it once the
+>   install finishes**; nothing depends on keeping it.
+> - **The rules always install to the same fixed location**, no matter which directory you ran the
+>   command from: `~/.claude/cooperation-rules.md`, a one-line edit to `~/.claude/CLAUDE.md`, and the
+>   git-hooks dir (the full list is in *What gets installed* below). `~/` = your home folder
+>   (`C:\Users\<you>` on Windows, `/home/<you>` on Linux, `/Users/<you>` on macOS).
+
 ### Step 1 — Get the files onto the machine
 Pick whichever you can run:
 
