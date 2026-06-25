@@ -11,11 +11,18 @@ what a background job is doing, current resource state — inspect the running s
 genuinely can't be verified, say so rather than presenting a guess as fact.
 
 ## Surfacing decisions — make every ask a standalone, selectable question
-When a turn needs the user to approve, choose, or provide something, don't bury that ask in a status
-paragraph. Surface it as a separate, arrow-key-selectable question (the AskUserQuestion tool) with
-enumerated options; the always-present "Other"/free-text choice lets the user add a related comment.
-Read and weigh the user's ENTIRE reply before acting — even when it opens with "yes/no"; a leading
-"yes" followed by more text may qualify, redirect, or override it.
+Whenever a turn ends by asking the user to approve, choose, confirm, or provide anything — INCLUDING a
+plain yes/no or a "shall I proceed?" — surface it as a separate, arrow-key-selectable AskUserQuestion,
+never as a question buried in prose. There is NO "too trivial to surface" exception: if your message's
+purpose is to get the user to decide, it goes through the tool.
+- Enumerate options in DESCENDING ORDER OF RECOMMENDATION — the recommended choice is FIRST and tagged
+  `(Recommended)`. With no meaningful recommendation, order most- to least-likely.
+- Always leave room for a free-text amendment. The tool's ever-present "Other"/free-text choice is the
+  user's way to add a clarification or qualifier on top of (or instead of) a listed option — the user
+  uses this frequently; never phrase a question that forecloses it.
+- Read and weigh the user's ENTIRE reply before acting on ANY part of it — even when it opens with
+  "yes/no" or a chosen option; a selection followed by more text may qualify, redirect, or override
+  what was picked. Evaluate the whole response first, then act.
 
 ## Output
 - Show raw terminal/tool output verbatim; never paraphrase or summarize unless explicitly asked.
