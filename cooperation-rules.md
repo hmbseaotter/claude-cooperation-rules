@@ -49,3 +49,21 @@ referents in close proximity. Separate distinct ideas visually (numbered leads, 
 ## Repo hygiene
 Gitignore tool-/editor-/OS-generated junk; never commit it. When you notice such an untracked artifact,
 add it to `.gitignore` and stage selectively so it can't slip into a commit.
+
+## Auto-formatter hooks — surface before reflowing hand-crafted files
+Some setups run an auto-formatter (e.g. Prettier) as a PostToolUse hook that reformats a file every time
+it is edited through the tools. A formatter changes only whitespace / quoting / wrapping — never
+behaviour — but on the first edit it **reflows the entire file**, which destroys deliberate layout in
+hand-crafted or intentionally-compact HTML/CSS/JS (e.g. printable infographics) and creates large diff
+churn.
+
+**Rule (active, machine-agnostic):** before editing an `.html` / `.css` / `.js` file in a project where
+such a hook is (or may be) enabled, surface it to the user *first* — as a selectable question that
+explains the effect (whole-file reflow; harmless to behaviour; big churn on hand-crafted files) and
+offers: keep as-is · exempt this file (`.prettierignore` or an inline `<!-- prettier-ignore -->`) ·
+proceed once. Never let a formatter silently clobber intentional formatting.
+
+*Hook specifics (here for completeness — the rule above is the active, portable part; the concrete hook
+it guards against is not global, it lives in the owner's `cli_projects` workspace): that hook is
+**opt-in per project** via a `.prettier-hook` marker file, announces every reformat with disable
+instructions, and is documented in `cli_projects/CLAUDE.md`.*
