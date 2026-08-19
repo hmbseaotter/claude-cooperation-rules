@@ -34,7 +34,18 @@ count=$(printf '%s\n' "$report" | head -1)
 case "$count" in ''|*[!0-9]*) exit 0 ;; esac        # non-numeric -> fail open
 [ "$count" -eq 0 ] && exit 0                        # no hard contradictions -> allow the commit
 
+# The first stderr line is a MACHINE-READABLE CONTRACT, not prose. Tooling that shells out to
+# `git commit` keys off it to tell "the gate deferred this commit" apart from "the commit really
+# failed" -- the LLM Wiki Control Panel shows a neutral "saved, commit deferred" status for the
+# former and a red error for the latter (app/services/sync.py).
+#
+# WHY IT RIDES ON STDERR RATHER THAN THE EXIT STATUS. Git collapses EVERY failing pre-commit hook
+# to exit status 1 -- verified empirically 2026-08-18 with hooks exiting 9 and 3, both of which
+# `git commit` reported as 1. So the exit code below CANNOT carry this signal to the caller.
+#
+# Keep the token spelling EXACT. The human-readable banner under it is free to be reworded.
 {
+  echo "CONTRADICTION-GATE-BLOCKED count=$count"
   echo ""
   echo "  ====================================================="
   echo "  PRE-COMMIT BLOCKED -- $count unresolved HARD contradiction(s)."
@@ -49,4 +60,9 @@ case "$count" in ''|*[!0-9]*) exit 0 ;; esac        # non-numeric -> fail open
   echo "  ====================================================="
   echo ""
 } 1>&2
-exit 1
+
+# 9 = "blocked by the contradiction gate", distinct from a generic hook failure. Git reports this
+# to `git commit` as plain 1 regardless (see above), so this value only reaches someone who runs
+# the hook directly -- e.g. `sh ~/.git-hooks/pre-commit` in a wiki, or a test harness. It is the
+# honest exit status for the condition; the stderr token is what tooling actually reads.
+exit 9
