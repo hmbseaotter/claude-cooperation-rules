@@ -67,6 +67,58 @@ if [ -n "$env_staged" ]; then
 fi
 [ "$secret_blocked" -eq 0 ] || exit 1
 
+# ---------------------------------------------------------------------------
+# PRIVATE-DIRECTORY GUARD -- runs in EVERY repo, deliberately ABOVE the
+# contradiction gate's early exit below, for the same reason as the secret
+# guard: that gate no-ops outside llm-wiki repos; this must not.
+#
+# Blocks a commit that stages anything under a TOP-LEVEL `private/` directory.
+# The convention: `private/` holds material whose publication is undecided --
+# drafts, build logs, notes, anything not yet cleared for a public repo. A
+# `.gitignore` entry is the primary control; it is advisory, and `git add -f`
+# walks straight through it. This is the backstop.
+#
+# Why this matters more than it looks: a repo built private and later flipped
+# public publishes its history RETROACTIVELY. Deleting a file before the flip
+# does not help -- the earlier commit is still there. So the moment to catch
+# publication-deferred material is the commit, not the flip.
+#
+# TOP-LEVEL ONLY, on purpose. A `private/` at any depth would be the safer
+# match for secrets, but `src/private/` and `app/private/` are ordinary source
+# directories in plenty of codebases, and a global hook that blocks them would
+# be routinely bypassed with --no-verify -- which would disable the .env guard
+# above at the same time. Guarding the documented convention (repo-root
+# `private/`) covers the real threat without training anyone to skip the hook.
+#
+# Fails CLOSED, like the secret guard: this protects disclosure, and the
+# contradiction gate's fail-open reasoning does not apply.
+#
+# Deliberate bypass, if you really do mean it:  git commit --no-verify
+# ---------------------------------------------------------------------------
+private_blocked=0
+private_staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^private/' || true)
+if [ -n "$private_staged" ]; then
+  {
+    echo "PRIVATE-GUARD-BLOCKED"
+    echo ""
+    echo "  ====================================================="
+    echo "  PRE-COMMIT BLOCKED -- staged path(s) under 'private/':"
+    echo ""
+    echo "$private_staged" | sed 's/^/    /'
+    echo ""
+    echo "  'private/' holds material whose publication is undecided."
+    echo "  A private repo flipped public publishes its history too, so"
+    echo "  committing this now decides the question by default."
+    echo ""
+    echo "    Unstage :  git restore --staged <path>"
+    echo "    Ignore  :  echo 'private/' >> .gitignore"
+    echo "  ====================================================="
+    echo ""
+  } 1>&2
+  private_blocked=1
+fi
+[ "$private_blocked" -eq 0 ] || exit 1
+
 [ -f tools/contradiction_qa.py ] || exit 0          # not a contradiction-QA wiki -> nothing to gate
 
 report=$(python - <<'PY' 2>/dev/null
