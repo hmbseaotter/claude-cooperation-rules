@@ -110,9 +110,12 @@ note. Install `git` and re-run later to add them.
 - Never deletes anything, never overwrites your `CLAUDE.md`, never replaces an existing hook, never
   repoints an already-set `core.hooksPath`, never sends data anywhere, never asks for credentials.
 - The hooks are conservative: **pre-push** only blocks a push whose GitHub owner isn't your
-  authenticated `gh` account (bypass: `git push --no-verify`); **pre-commit** only blocks a commit
-  with unresolved "HARD" contradictions in repos that ship `tools/contradiction_qa.py`, is a no-op
-  everywhere else, and is fail-open (bypass: `git commit --no-verify`).
+  authenticated `gh` account (bypass: `git push --no-verify`). **pre-commit** carries two independent
+  guards: a **secret guard** that blocks a commit staging a file named exactly `.env` larger than
+  20 bytes (every repo, fail-*closed* — templates such as `.env.example` are untouched), and the
+  **contradiction gate**, which only blocks a commit with unresolved "HARD" contradictions in repos
+  that ship `tools/contradiction_qa.py`, is a no-op everywhere else, and is fail-*open*. Both bypass
+  with `git commit --no-verify`.
 
 > **Heads-up for unfamiliar / borrowed machines (the pre-push hook):** the **pre-push** guard calls
 > `gh` (GitHub CLI). If `gh` is missing or can't verify you, it **fails safe by BLOCKING the push** —

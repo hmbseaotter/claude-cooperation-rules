@@ -42,6 +42,12 @@ referents in close proximity. Separate distinct ideas visually (numbered leads, 
   authenticated `gh` user. Match → push normally. Differ or unverifiable → do NOT push; warn it's not
   your repo and require an explicit one-time challenge-code confirmation before `git push --no-verify`.
   (A global `pre-push` hook enforces this independently — installed by this bundle.)
+- **Never commit a populated `.env`**: a staged file named exactly `.env` over 20 bytes blocks the
+  commit. `.gitignore` is the primary control; this is the backstop for when it is absent, edited, or
+  bypassed with `git add -f`. Templates (`.env.example`) are unaffected, and the guard fails *closed*.
+  A secret reaches the remote at `git push`, long before anything is published deliberately — treat
+  anything that escapes as compromised and rotate it. (A global `pre-commit` guard enforces this —
+  installed by this bundle.)
 - **Contradiction pre-commit gate** (llm-wiki repos): a global `pre-commit` hook blocks commits with
   unresolved HARD contradictions in any repo shipping `tools/contradiction_qa.py`; no-op elsewhere;
   fail-open; bypass with `git commit --no-verify`. (Installed by this bundle.)

@@ -13,8 +13,11 @@ change MUST preserve all of:
 - **No network, no login, no token** at install time — everything ships here as plain text.
 - **POSIX `sh` only** — the installer runs under Git Bash on Windows and Terminal on macOS/Linux. No
   Bashisms, no PowerShell, no `python`.
-- **Fail direction is deliberate** — the push-owner hook fails *closed*, the contradiction gate fails
-  *open*. Keep that asymmetry.
+- **Fail direction is deliberate** — the push-owner hook and the `.env` secret guard fail *closed*;
+  the contradiction gate fails *open*. Keep that asymmetry: a repo that cannot commit is worse than a
+  missed contradiction, but a leaked credential cannot be undone by re-running anything.
+- **Guard order in `pre-commit` matters** — the secret guard must stay ABOVE the contradiction gate's
+  early `exit 0`, or it will never run outside llm-wiki repos.
 
 If a change can't preserve all of the above, it's a different tool — open an issue to discuss first.
 

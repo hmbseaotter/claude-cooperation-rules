@@ -1,5 +1,6 @@
 #!/bin/sh
-# Pre-commit contradiction gate (workspace QA safety measure).
+# Pre-commit hook -- two independent guards: a SECRET GUARD (blocks a populated .env, every
+# repo, fails closed) and the CONTRADICTION GATE (llm-wiki repos only, fails open).
 # In any repo that ships tools/contradiction_qa.py (the llm-wiki projects), block a commit while
 # there are unresolved HARD contradictions -- two claims that cannot both be true. Committing one
 # would bury a known conflict as settled knowledge. SOFT/SCOPE contradictions are tentative and do
@@ -12,6 +13,59 @@
 #
 # Deliberate bypass for an intentional commit over an open hard contradiction:
 #     git commit --no-verify
+
+# ---------------------------------------------------------------------------
+# SECRET GUARD -- runs in EVERY repo, deliberately ABOVE the contradiction
+# gate's early exit below (that gate no-ops outside llm-wiki repos; this must
+# not).
+#
+# Blocks a commit that stages a POPULATED .env. A .gitignore entry is the
+# primary control, but it can be absent, edited, or bypassed with `git add -f`;
+# this is the backstop. A credential reaches the remote at `git push`, long
+# before anything is published deliberately, and public repos are scraped
+# continuously -- treat any pushed secret as compromised and rotate it.
+#
+# Fails CLOSED, unlike the contradiction gate below. That gate fails open
+# because a repo that cannot commit is worse than a missed check; a leaked
+# credential is not recoverable by re-running anything, so an indeterminate
+# size blocks. (Same reasoning as the pre-push owner guard.)
+#
+# Threshold 20 bytes: a populated API-key line runs ~100-130 bytes, while a
+# committed template is typically ~40. The basename is matched EXACTLY as
+# ".env", so .env.example / .env.sample / .env.template commit normally.
+#
+# Deliberate bypass, if you really do mean it:  git commit --no-verify
+# ---------------------------------------------------------------------------
+secret_blocked=0
+env_staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '(^|/)\.env$' || true)
+if [ -n "$env_staged" ]; then
+  OLDIFS=$IFS
+  IFS='
+'
+  for f in $env_staged; do
+    size=$(git cat-file -s ":$f" 2>/dev/null)
+    case "$size" in ''|*[!0-9]*) size=999999 ;; esac   # unreadable -> fail CLOSED
+    [ "$size" -gt 20 ] || continue
+    {
+      echo "SECRET-GUARD-BLOCKED file=$f size=$size"
+      echo ""
+      echo "  ====================================================="
+      echo "  PRE-COMMIT BLOCKED -- staged '$f' is $size bytes (limit 20)."
+      echo "  A populated .env almost certainly holds a live credential."
+      echo ""
+      echo "    Unstage it :  git restore --staged $f"
+      echo "    Ignore it  :  echo '.env' >> .gitignore"
+      echo ""
+      echo "  Only a file named exactly '.env' is checked, so templates such"
+      echo "  as .env.example are unaffected and commit normally."
+      echo "  ====================================================="
+      echo ""
+    } 1>&2
+    secret_blocked=1
+  done
+  IFS=$OLDIFS
+fi
+[ "$secret_blocked" -eq 0 ] || exit 1
 
 [ -f tools/contradiction_qa.py ] || exit 0          # not a contradiction-QA wiki -> nothing to gate
 
