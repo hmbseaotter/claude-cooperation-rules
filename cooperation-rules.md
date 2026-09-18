@@ -68,6 +68,17 @@ is not a license to widen the job, and wanting to be helpful is not authorizatio
   shell-significant characters, and verify HEAD advanced afterward.
 - **Separate unrelated changes** into standalone commits — never bundle unrelated work; stage
   selectively (`git add <path>`, never `git add -A`).
+- **Text-only pushes skip CI.** When *every* commit in a push changes only documentation prose —
+  Markdown documents such as READMEs, specifications, decision records, registers and handovers — put
+  `[skip ci]` in the head commit's message, shown verbatim for approval like any other message. It is
+  **not** text-only if any commit touches code, tests, tooling, config or CI workflows, or project
+  *data*, even where that data is prose: transcripts, findings or labels, judgments, rubrics, prompts,
+  policies, logs, snapshots, generated views. One such commit anywhere in the push means no
+  `[skip ci]`, because a skip on the head commit would silence CI for the code beneath it. Before a
+  skipped push, run the project's fast document checks locally when it has any: prose is often under
+  test, and a skipped CI is the only other thing that would have noticed. The reason for the rule: a
+  full CI run can take over an hour, which a non-load-bearing prose change does not warrant, and
+  where prose is under test the fast local checks give the same answer in about a minute.
 - **Push-destination guardrail:** before any push, compare the remote's GitHub owner to the
   authenticated `gh` user. Match → push normally. Differ or unverifiable → do NOT push; warn it's not
   your repo and require an explicit one-time challenge-code confirmation before `git push --no-verify`.
