@@ -68,6 +68,14 @@ is not a license to widen the job, and wanting to be helpful is not authorizatio
   shell-significant characters, and verify HEAD advanced afterward.
 - **Separate unrelated changes** into standalone commits — never bundle unrelated work; stage
   selectively (`git add <path>`, never `git add -A`).
+- **Assume another session may share the working tree.** Before any command that acts on the whole
+  tree — `git add --renormalize .`, `git add -u`, `git stash`, `git checkout .` — run `git status`
+  and check for other running sessions. Changes you did not make belong to someone: leave them
+  unstaged and untouched, and say so. A whole-tree command stages or discards them along with yours.
+- **Fetch before committing to a repository that may have moved elsewhere** — pushed from another
+  machine, another clone or another session. Committing on a stale base turns the push into a
+  rejected non-fast-forward, and the commit message you had approved may no longer be true once it
+  is rebased onto what arrived. Never force-push to get past it.
 - **CI runs by default; only listed slow-CI repositories skip it for text-only pushes.** Every push
   runs CI unless the repository is named in the **slow-CI list** kept in the machine's global
   `CLAUDE.md`. For a listed repository, when *every* commit in a push changes only documentation
