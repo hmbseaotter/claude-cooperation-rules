@@ -68,17 +68,21 @@ is not a license to widen the job, and wanting to be helpful is not authorizatio
   shell-significant characters, and verify HEAD advanced afterward.
 - **Separate unrelated changes** into standalone commits — never bundle unrelated work; stage
   selectively (`git add <path>`, never `git add -A`).
-- **Text-only pushes skip CI.** When *every* commit in a push changes only documentation prose —
-  Markdown documents such as READMEs, specifications, decision records, registers and handovers — put
-  `[skip ci]` in the head commit's message, shown verbatim for approval like any other message. It is
-  **not** text-only if any commit touches code, tests, tooling, config or CI workflows, or project
-  *data*, even where that data is prose: transcripts, findings or labels, judgments, rubrics, prompts,
-  policies, logs, snapshots, generated views. One such commit anywhere in the push means no
-  `[skip ci]`, because a skip on the head commit would silence CI for the code beneath it. Before a
-  skipped push, run the project's fast document checks locally when it has any: prose is often under
-  test, and a skipped CI is the only other thing that would have noticed. The reason for the rule: a
-  full CI run can take over an hour, which a non-load-bearing prose change does not warrant, and
-  where prose is under test the fast local checks give the same answer in about a minute.
+- **CI runs by default; only listed slow-CI repositories skip it for text-only pushes.** Every push
+  runs CI unless the repository is named in the **slow-CI list** kept in the machine's global
+  `CLAUDE.md`. For a listed repository, when *every* commit in a push changes only documentation
+  prose — Markdown documents such as READMEs, specifications, decision records, registers and
+  handovers — put `[skip ci]` in the head commit's message, shown verbatim for approval like any
+  other message. It is **not** text-only if any commit touches code, tests, tooling, config or CI
+  workflows, or project *data*, even where that data is prose: transcripts, findings or labels,
+  judgments, rubrics, prompts, policies, logs, snapshots, generated views. One such commit anywhere in
+  the push means no `[skip ci]`, because a skip on the head commit would silence CI for the code
+  beneath it. Before a skipped push, run the project's fast document checks locally when it has any:
+  prose is often under test, and a skipped CI is the only other thing that would have noticed. The
+  reason for the rule: a slow repository's full CI run can take ten minutes to over an hour, which a
+  non-load-bearing prose change does not warrant; where CI finishes in a minute or two, skipping saves
+  nothing and can silence work a workflow does beyond testing — such as asking another repository to
+  run a check. A repository whose CI becomes slow is added to the list, not skipped by judgment.
 - **Push-destination guardrail:** before any push, compare the remote's GitHub owner to the
   authenticated `gh` user. Match → push normally. Differ or unverifiable → do NOT push; warn it's not
   your repo and require an explicit one-time challenge-code confirmation before `git push --no-verify`.
@@ -96,6 +100,21 @@ is not a license to widen the job, and wanting to be helpful is not authorizatio
 ## Repo hygiene
 Gitignore tool-/editor-/OS-generated junk; never commit it. When you notice such an untracked artifact,
 add it to `.gitignore` and stage selectively so it can't slip into a commit.
+
+## Line endings — LF everywhere, held by the repository and by the code
+Three layers, because each one covers a gap the others cannot:
+- **Every repository ships a `.gitattributes` with `* text=auto eol=lf`**, from its first commit or the
+  moment one is noticed missing. A machine-wide attributes file only covers the machine it is on; it
+  does not travel with a clone, and a Windows clone with `core.autocrlf=true` then checks every text file
+  out as CRLF — which breaks anything that compares files byte for byte. If the repository checks
+  what it tracks against an allowlist, add the file to that list in the same commit.
+- **Code that writes text files names the line ending** — in Python, `newline="\n"` on `open` /
+  `write_text`, alongside `encoding="utf-8"`. No git setting reaches a file a program writes at run
+  time, and on Windows Python writes CRLF by default; where output is hashed or compared, hold it
+  with a test that the writer asks for LF.
+- **Check line endings with `git ls-files --eol`**, never by grepping for a carriage return: the
+  `i/` column is what is committed, the `w/` column what is on disk, and a grep for `\r` is easy to
+  write wrongly and then read as a finding.
 
 ## Auto-formatter hooks — surface before reflowing hand-crafted files
 Some setups run an auto-formatter (e.g. Prettier) as a PostToolUse hook that reformats a file every time
