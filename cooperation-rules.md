@@ -91,6 +91,17 @@ is not a license to widen the job, and wanting to be helpful is not authorizatio
   non-load-bearing prose change does not warrant; where CI finishes in a minute or two, skipping saves
   nothing and can silence work a workflow does beyond testing — such as asking another repository to
   run a check. A repository whose CI becomes slow is added to the list, not skipped by judgment.
+- **Never write the skip marker in a commit message except to use it.** It matches anywhere
+  in the head commit's message, so a message that *describes* the convention — quoting it,
+  or explaining why an earlier commit carried it — skips the build it was meant to run. This
+  happened on 2026-09-24: the commit repairing a red `main` skipped CI by quoting the marker
+  in a sentence about the commit that had used it, and the push reported success with no run
+  behind it. The failure is silent, which is what makes it worth a rule — nothing reports a
+  workflow that never started, and the history reads green with a hole in it. Refer to it as
+  *the skip marker* in prose and reserve the literal string for the line that means it; if a
+  message must quote it, dispatch the workflow by hand afterwards and say so. The same
+  reasoning is D89's in the harness project: a document explaining a checker cannot contain
+  the checker's own trigger.
 - **Push-destination guardrail:** before any push, compare the remote's GitHub owner to the
   authenticated `gh` user. Match → push normally. Differ or unverifiable → do NOT push; warn it's not
   your repo and require an explicit one-time challenge-code confirmation before `git push --no-verify`.
@@ -108,6 +119,25 @@ is not a license to widen the job, and wanting to be helpful is not authorizatio
 ## Repo hygiene
 Gitignore tool-/editor-/OS-generated junk; never commit it. When you notice such an untracked artifact,
 add it to `.gitignore` and stage selectively so it can't slip into a commit.
+
+## Public artifacts carry no private context
+Nothing destined for a public repository or page may reference the private reason it exists — a job
+search (résumé, application, target company, recruiter, interview prep), a client, an employer, a
+negotiation — unless the user explicitly asks for it. That covers files, commit messages, specs and
+decision records, tests, and generated names.
+- **A rule or a test that keeps a secret out must not spell the secret.** A word list to scan for
+  lives outside the repository, never in a tracked file; splitting a word across string literals
+  hides it from a scanner, not from a reader.
+  **When a document must show one of these shapes, write it with placeholders** —
+  `<drive_letter>:\<home_dir>\<username>`, `/<home_dir>/<username>`, `\\<host>\<share>` — and make
+  *every* element a placeholder, the home directory included. A literal one still matches inside an
+  example, and correctly so: a categorical rule cannot carry an exception for the parts that look
+  generic. Two files learned this on 2026-09-24, both written to document the scanner that caught
+  them.
+- **Scan the whole history, not only the current files, before anything becomes public** —
+  publishing a repository publishes every commit. Prove first that the scan can match a known
+  instance: a pattern that cannot match reads exactly like a clean result.
+- When in doubt whether a detail is private context, ask.
 
 ## Line endings — LF everywhere, held by the repository and by the code
 Three layers, because each one covers a gap the others cannot:
