@@ -1,6 +1,7 @@
 #!/bin/sh
-# Pre-commit hook -- two independent guards: a SECRET GUARD (blocks a populated .env, every
-# repo, fails closed) and the CONTRADICTION GATE (llm-wiki repos only, fails open).
+# Pre-commit hook -- a SECRET GUARD (blocks a populated .env) and a PRIVATE GUARD (blocks a
+# top-level private/), every repo, fail closed and sharing one enumeration of the staged
+# paths; and the CONTRADICTION GATE (llm-wiki repos only, fails open).
 # In any repo that ships tools/contradiction_qa.py (the llm-wiki projects), block a commit while
 # there are unresolved HARD contradictions -- two claims that cannot both be true. Committing one
 # would bury a known conflict as settled knowledge. SOFT/SCOPE contradictions are tentative and do
@@ -13,6 +14,40 @@
 #
 # Deliberate bypass for an intentional commit over an open hard contradiction:
 #     git commit --no-verify
+
+# ---------------------------------------------------------------------------
+# STAGED PATHS -- enumerated ONCE for both guards below, and FAIL CLOSED if
+# the enumeration itself fails.
+#
+# Each guard used to run `git diff --cached` inline with `|| true`, so a
+# failed enumeration produced an empty list, both guards read it as "nothing
+# staged", and the commit went through with neither having looked -- fail-open,
+# in two guards whose whole posture is fail-closed. Found 2026-09-30 by
+# driving this hook with a `git` that fails `diff`. So the exit status is
+# checked rather than discarded.
+#
+# Safe on a repository's FIRST commit: `git diff --cached` compares the index
+# with the empty tree when HEAD does not exist yet, and exits 0. A non-zero
+# status here is a genuine failure -- not a work tree, an unreadable index --
+# which is exactly the case that must block.
+# ---------------------------------------------------------------------------
+staged=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null)
+enum_status=$?
+if [ "$enum_status" -ne 0 ]; then
+  {
+    echo "STAGED-ENUMERATION-FAILED status=$enum_status"
+    echo ""
+    echo "  ====================================================="
+    echo "  PRE-COMMIT BLOCKED -- could not enumerate staged paths."
+    echo ""
+    echo "  The secret and private guards below need this list to decide"
+    echo "  anything. With no list, neither can say the commit is safe --"
+    echo "  so it blocks. A missed credential is not recoverable."
+    echo "  ====================================================="
+    echo ""
+  } 1>&2
+  exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # SECRET GUARD -- runs in EVERY repo, deliberately ABOVE the contradiction
@@ -37,7 +72,7 @@
 # Deliberate bypass, if you really do mean it:  git commit --no-verify
 # ---------------------------------------------------------------------------
 secret_blocked=0
-env_staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '(^|/)\.env$' || true)
+env_staged=$(printf '%s\n' "$staged" | grep -E '(^|/)\.env$' || true)
 if [ -n "$env_staged" ]; then
   OLDIFS=$IFS
   IFS='
@@ -96,7 +131,7 @@ fi
 # Deliberate bypass, if you really do mean it:  git commit --no-verify
 # ---------------------------------------------------------------------------
 private_blocked=0
-private_staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^private/' || true)
+private_staged=$(printf '%s\n' "$staged" | grep -E '^private/' || true)
 if [ -n "$private_staged" ]; then
   {
     echo "PRIVATE-GUARD-BLOCKED"
