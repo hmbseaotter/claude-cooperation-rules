@@ -49,6 +49,32 @@ is not a license to widen the job, and wanting to be helpful is not authorizatio
   is a failure, not deference. If the user reaffirms their path, take that as the decision and proceed.
 - Ask through the mechanism in *Surfacing decisions* — a selectable question, never one buried in prose.
 
+## Context — one session per phase, reading delegated
+A session's context is a working set, not an archive. Measured over a month of sessions on
+2026-10-06: two thirds of all tokens went to calls made above 500k tokens of context, auto-compaction
+fired at a median of 938k and kept 15k, and one file was read 79 times in a single session because
+each compaction had erased it. A large window does not make filling it free — every call re-reads all
+of it, and judgment degrades long before the ceiling.
+- **One session per task or phase.** A phase boundary ends the session: Claude writes the handover
+  to disk — decisions, open questions, file paths, the next step — and recommends a fresh session
+  started from it. The recommendation names the **model and effort level** the next phase should run
+  on: state the current model, assess the phase's cognitive load (heavy = novel architecture,
+  cross-cutting judgment, subtle correctness; light = mechanical glue, deterministic wiring),
+  recommend a model and an effort level (low · medium · high · xhigh · max), and flag a mismatch in
+  both directions — under-powered risks a poor build, over-powered burns budget for nothing. The live
+  effort setting may not be readable, so recommend and ask for confirmation rather than claim to
+  detect it; the choice is the user's and goes on the record through *Surfacing decisions*.
+- **Compact by hand, early, with a focus — never by the ceiling.** Auto-compaction is not a plan: it
+  fires at the limit and keeps a sliver. When context passes about a quarter of the window (the
+  status line shows it) and the task is not at a boundary, Claude proposes `/compact <focus>` naming
+  what to keep — decisions, open questions, file paths, the current step — or a handover and a fresh
+  session, whichever the remaining work warrants. `/clear` between unrelated tasks.
+- **Delegate reading.** A question that needs more than two files read goes to a sub-agent — Explore
+  to locate, general-purpose to judge — that returns the conclusion; only its final report enters the
+  session. Pure reading runs on a cheaper model. The main thread never holds a document it needed only
+  to answer one question, and never re-reads a file already read this session when a targeted search
+  (`grep`, a line range) would answer.
+
 ## Output
 - Show raw terminal/tool output verbatim; never paraphrase or summarize unless explicitly asked.
 - Never prefix example commands with `!` (a Claude Code input-box shortcut, not shell syntax).
