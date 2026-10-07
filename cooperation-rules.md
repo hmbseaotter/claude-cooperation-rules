@@ -65,10 +65,14 @@ of it, and judgment degrades long before the ceiling.
   effort setting may not be readable, so recommend and ask for confirmation rather than claim to
   detect it; the choice is the user's and goes on the record through *Surfacing decisions*.
 - **Compact by hand, early, with a focus — never by the ceiling.** Auto-compaction is not a plan: it
-  fires at the limit and keeps a sliver. When context passes about a quarter of the window (the
-  status line shows it) and the task is not at a boundary, Claude proposes `/compact <focus>` naming
-  what to keep — decisions, open questions, file paths, the current step — or a handover and a fresh
-  session, whichever the remaining work warrants. `/clear` between unrelated tasks.
+  fires at the limit and keeps a sliver. A quarter of the window (the status line shows it) is a
+  review point, not a stop: Claude says what share of the context is still live — files and results
+  the next steps need — and what is dead weight — superseded file versions, old tool output, settled
+  questions. Mostly dead: propose `/compact <focus>` naming what to keep — decisions, open questions,
+  file paths, the current step — or a handover and a fresh session, whichever the remaining work
+  warrants. Mostly live: carry on and say so; a large working set is what the window is for. Either
+  way, by about two thirds of the window a compaction or handover happens on purpose, so the ceiling
+  never decides. `/clear` between unrelated tasks.
 - **Delegate reading.** A question that needs more than two files read goes to a sub-agent — Explore
   to locate, general-purpose to judge — that returns the conclusion; only its final report enters the
   session. Pure reading runs on a cheaper model. The main thread never holds a document it needed only
